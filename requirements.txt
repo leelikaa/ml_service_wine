@@ -1,0 +1,8 @@
+SQLAlchemy
+python-decouple
+fastapi
+uvicorn
+passlib
+pydantic
+numpy
+joblib
