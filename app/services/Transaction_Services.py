@@ -30,7 +30,11 @@ def create_transaction(new_transaction: Transaction, session) -> None:
 
 def top_up(user_id: int, money: float, session):
     user = get_user_by_id(user_id, session)
-    user.balance += money
+    if user.balance is not None:
+        user.balance += money
+    else:
+        user.balance = money
     transaction = Transaction(user_id=user_id, time=datetime.now(), money=money, type_="top-up")
     create_transaction(transaction, session)
     return {f'User {user.email} new balance: {user.balance}'}
+

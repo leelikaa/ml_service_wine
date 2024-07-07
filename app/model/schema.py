@@ -11,9 +11,8 @@ class UserData(BaseModel):  # базовая информация при рег�
 
 class Users(BaseModel):
     user_id: int
-    balance: float
+    balance: float = 0.0
     email: str
-    telegram: str
     password: str
     role: str  # отделять обычных пользователей и админа
 
@@ -47,7 +46,7 @@ class WineDescription(BaseModel):
     alcohol: float = 9.4
 
 
-class Prediction(BaseModel, WineDescription):
+class Prediction(WineDescription):
     prediction_id: int
     user_id: int
     user: Users
