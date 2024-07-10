@@ -1,4 +1,4 @@
-from model.schema import Transaction
+from model.transaction import Transaction
 from services.User_Services import get_user_by_id
 from typing import List
 from datetime import datetime
@@ -37,4 +37,3 @@ def top_up(user_id: int, money: float, session):
     transaction = Transaction(user_id=user_id, time=datetime.now(), money=money, type_="top-up")
     create_transaction(transaction, session)
     return {f'User {user.email} new balance: {user.balance}'}
-

@@ -1,10 +1,11 @@
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from typing import Optional
 from pathlib import Path
 from pydantic import Field
+
 
 
 class Settings(BaseSettings):
@@ -18,7 +19,7 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self):
-        return f'postgresql://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}'
+        return f'postgresql+psycopg2://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}'
 
     model_config = SettingsConfigDict(env_file=str(env_file_path))
 
@@ -30,10 +31,14 @@ def get_settings() -> Settings:
 
 CONNECTIO_URI = get_settings().DATABASE_URL
 
-engine = create_engine(CONNECTIO_URI)
+engine = create_engine(url=CONNECTIO_URI,
+                       echo=False,
+                       client_encoding='utf8')
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+metadata = MetaData()
 
 
 def get_session():
@@ -42,4 +47,5 @@ def get_session():
 
 
 def init_db():
-    Base.metadata.create_all(engine)
+    Base.metadata.drop_all(bind=engine) #это на период проверок
+    Base.metadata.create_all(bind=engine)

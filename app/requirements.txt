@@ -8,3 +8,5 @@ numpy
 joblib
 pydantic-settings
 psycopg2-binary
+asyncpg
+scikit-learn
