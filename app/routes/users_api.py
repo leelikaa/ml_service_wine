@@ -1,22 +1,17 @@
 from fastapi import APIRouter, HTTPException, Depends, status
-from database.database import SessionLocal
+from database.database import get_session
 from sqlalchemy.orm import Session
-
-from model.schema import Users
+from typing import Union
+from model.schema import PydanticUsers
+from model.users import Users
 from services import User_Services, Transaction_Services
 
-
-def get_db():
-    with SessionLocal() as db:
-        return db
-
-
-user_router = APIRouter(tags=["User"])
+user_route = APIRouter(tags=["User"])
 hash_password = User_Services.HashPassword()
 
 
-@user_router.post("/signup")
-async def sign_new_user(user: Users, session=Depends(get_db)) -> dict:
+@user_route.post("/signup")
+async def sign_new_user(user: PydanticUsers, session=Depends(get_session)) -> dict:
     user_exist = User_Services.get_user_by_email(user.email, session)
     if user_exist:
         raise HTTPException(
@@ -26,12 +21,11 @@ async def sign_new_user(user: Users, session=Depends(get_db)) -> dict:
     hashed_password = hash_password.create_hash(user.password)
     user.password = hashed_password
     User_Services.create_user(user, session)
-
     return {"message": "User created successfully"}
 
 
-@user_router.post("/signin")
-async def sign_user_in(email: str, password: str, db: Session = Depends(get_db)):
+@user_route.post("/signin")
+async def sign_user_in(email: str, password: str, db: Session = Depends(get_session)):
     user_exist = User_Services.get_user_by_email(email, db)
 
     if user_exist is None:
@@ -46,9 +40,19 @@ async def sign_user_in(email: str, password: str, db: Session = Depends(get_db))
     )
 
 
-@user_router.post("{id}/topup")
-def top_up(id: int, money: float = 0.0, db: Session = Depends(get_db)):
+@user_route.post("{id}/topup")
+def top_up(id: int, money: Union[int, float] = 0.0, db: Session = Depends(get_session)):
+    money = float(money)
     if money <= 0.0:
-        raise HTTPException(status_code=400, detail="Incorrect amount of money, must be >0")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect amount of money, must be >0")
     else:
         Transaction_Services.top_up(id, money, db)
+        return {f"Successful top up"}
+
+
+@user_route.post("{id}/balance")
+def user_balance(id: int, db: Session = Depends(get_session)):
+    user = User_Services.get_user_by_id(id, db)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User id not found")
+    return user.balance

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from database.database import Base, engine, metadata
+from database.database import Base, engine
 from model.users import Users
 
 

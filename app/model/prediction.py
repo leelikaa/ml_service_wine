@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from database.database import Base, engine, metadata
+from database.database import Base, engine
 from model.users import Users
 
 
@@ -12,7 +12,6 @@ class Prediction(Base):
     user_id = Column(Integer, ForeignKey(Users.user_id), primary_key=True)
     user = relationship(Users)
     time = Column(DateTime(timezone=False))
-    result = Column(Float)
     fixed_acidity = Column(Float)
     volatile_acidity = Column(Float)
     citric_acid = Column(Float)
@@ -24,6 +23,7 @@ class Prediction(Base):
     pH = Column(Float)
     sulphates = Column(Float)
     alcohol = Column(Float)
+    result = Column(Float)
 
 
 

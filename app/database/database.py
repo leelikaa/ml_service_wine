@@ -1,11 +1,10 @@
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from typing import Optional
 from pathlib import Path
 from pydantic import Field
-
 
 
 class Settings(BaseSettings):
@@ -38,12 +37,10 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
-metadata = MetaData()
-
 
 def get_session():
-    session = SessionLocal()
-    return session
+    with SessionLocal() as session:
+        return session
 
 
 def init_db():
