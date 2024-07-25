@@ -2,13 +2,16 @@ version: '3'
 
 services:
   app:
-    build: ./app/
-    env_file:
-    - ./app/.env
+    build: ./app
+    ports:
+      - "8000:8000"
     volumes:
       - ./app:/app
     depends_on:
       - db
+      - rabbitmq
+    env_file:
+      - app/.env
 
   web-proxy:
     build: ./web-proxy
@@ -19,14 +22,17 @@ services:
       - app
       - db
 
-#  rabbitmq:
-#    image: rabbitmq
-#    ports:
-#      - "15672:15672"
-#      - "5672:5672"
-#    volumes:
-#      - ./data/rabbitmq:/var/lib/rabbitmq
-#    restart: on-failure
+  rabbitmq:
+     image: rabbitmq:3.13.1-management
+     hostname: rabbitmq
+     ports:
+       - "15672:15672"
+       - "5672:5672"
+     environment:
+       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+       RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: -rabbit disk_free_limit 2147483648
+     restart: on-failure
 
   db:
     container_name: db
@@ -36,8 +42,15 @@ services:
     expose:
       - 5432
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=wine
-    env_file:
-      - .env
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: wine
+    restart: on-failure
+
+  rabbit-worker:
+    build: ./app
+    command: python rabbit.py
+    depends_on:
+      - rabbitmq
+      - db
+    restart: on-failure
