@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from model.schema import PydanticUsers, PydanticPrediction, PydanticWineDescription
 from services import User_Services, Prediction_Services, Transaction_Services
 import asyncio
-from rabbit import channel, queue_name
+from worker.rabbit import channel, queue_name
 from sqlalchemy.orm.exc import NoResultFound
 import json
 

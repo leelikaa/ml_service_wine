@@ -5,15 +5,15 @@ from model.prediction import Prediction
 from services import Prediction_Services, Transaction_Services
 import json
 from database.database import get_session
-from sqlalchemy.orm import Session
-from fastapi import Depends
 from dotenv import load_dotenv
 import os
 
 load_dotenv('.env')
 
-username = os.getenv("RABBIT_USER", "rmuser")
-password = os.getenv("RABBIT_PASSWORD", "rmpassword")
+username = os.getenv("RABBITMQ_DEFAULT_USER")
+password = os.getenv("RABBITMQ_DEFAULT_PASS")
+
+print(f"RabbitMQ Username: {username}")
 
 prediction_price = 100
 
@@ -28,8 +28,13 @@ connection_params = pika.ConnectionParameters(
     blocked_connection_timeout=2
 )
 
-connection = pika.BlockingConnection(connection_params)
-channel = connection.channel()
+try:
+    connection = pika.BlockingConnection(connection_params)
+    channel = connection.channel()
+    print("Connection established successfully")
+except pika.exceptions.AMQPConnectionError as e:
+    print(f"Connection failed: {e}")
+    exit(1)
 
 queue_name = "prediction_queue"
 channel.queue_declare(queue=queue_name)

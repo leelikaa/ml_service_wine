@@ -6,6 +6,10 @@ COPY requirements.txt /app/
 
 RUN pip install --upgrade pip && pip install -r /app/requirements.txt
 
+EXPOSE 8080
+
 COPY ./ /app
+
+ENV PYTHONPATH=/app
 
 CMD ["python", "api.py"]

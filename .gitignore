@@ -1,6 +1,6 @@
 local/
 .idea/
 __pycache__
-app/.env
-app/.env
+.env
+.env
 data/
