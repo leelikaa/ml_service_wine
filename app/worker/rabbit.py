@@ -8,18 +8,21 @@ from database.database import get_session
 from dotenv import load_dotenv
 import os
 
-load_dotenv('.env')
 
-username = os.getenv("RABBITMQ_DEFAULT_USER")
-password = os.getenv("RABBITMQ_DEFAULT_PASS")
+load_dotenv('.envdb')
 
-print(f"RabbitMQ Username: {username}")
+username = os.getenv("RABBITMQ_DEFAULT_USER", "rmuser")
+password = os.getenv("RABBITMQ_DEFAULT_PASS", "rmpassword")
+
+print(f"RabbitMQ Username: {username}, password {password}")
+
 
 prediction_price = 100
 
 connection_params = pika.ConnectionParameters(
     host='rabbitmq',
     virtual_host='/',
+    port=5672,
     credentials=pika.PlainCredentials(
         username=username,
         password=password

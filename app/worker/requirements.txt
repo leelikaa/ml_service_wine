@@ -10,8 +10,9 @@ pydantic-settings
 psycopg2-binary
 asyncpg
 scikit-learn
-pika
 python-dotenv
+passlib
+pika
 pydantic
 alembic
 psycopg

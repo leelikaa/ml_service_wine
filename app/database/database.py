@@ -1,21 +1,26 @@
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import create_engine
 from functools import lru_cache
-import os
-from dotenv import load_dotenv
+from typing import Optional
 
 
-load_dotenv('.env')
+class Settings(BaseSettings):
+    DB_HOST: Optional[str] = None
+    DB_PORT: Optional[int] = None
+    DB_USER: Optional[str] = None
+    DB_PASS: Optional[str] = None
+    DB_NAME: Optional[str] = None
+    POSTGRES_USER: Optional[str] = None
+    POSTGRES_PASSWORD: Optional[str] = None
+    RABBITMQ_USER: Optional[str] = None
+    RABBITMQ_PASSWORD: Optional[str] = None
 
-DB_HOST = os.getenv('DB_HOST')
-DB_PORT = os.getenv('DB_PORT')
-DB_USER = os.getenv('DB_USER')
-DB_PASS = os.getenv('DB_PASS')
-DB_NAME = os.getenv('DB_NAME')
+    @property
+    def DATABASE_URL(self):
+        return f'postgresql+psycopg2://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}'
 
+    model_config = SettingsConfigDict(env_file='.envdb')
 
-if not all([DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME]):
-    raise ValueError("One or more database environment variables are missing")
 
 @lru_cache()
 def get_db_url() -> str:
