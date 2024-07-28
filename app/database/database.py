@@ -3,8 +3,6 @@ from sqlalchemy import create_engine
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from typing import Optional
-from pathlib import Path
-from pydantic import Field
 
 
 class Settings(BaseSettings):
@@ -13,14 +11,16 @@ class Settings(BaseSettings):
     DB_USER: Optional[str] = None
     DB_PASS: Optional[str] = None
     DB_NAME: Optional[str] = None
-
-    env_file_path: Path = Field(default=Path(__file__).resolve().parent / '.env')
+    POSTGRES_USER: Optional[str] = None
+    POSTGRES_PASSWORD: Optional[str] = None
+    RABBITMQ_USER: Optional[str] = None
+    RABBITMQ_PASSWORD: Optional[str] = None
 
     @property
     def DATABASE_URL(self):
         return f'postgresql+psycopg2://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}'
 
-    model_config = SettingsConfigDict(env_file=str(env_file_path))
+    model_config = SettingsConfigDict(env_file='.envdb')
 
 
 @lru_cache()

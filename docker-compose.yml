@@ -3,12 +3,21 @@ version: '3'
 services:
   app:
     build: ./app/
-    env_file:
-    - ./app/.env
+    environment:
+      - PYTHONPATH = /app
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_PASS=${DB_PASS}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=wine
     volumes:
       - ./app:/app
     depends_on:
       - db
+      - rabbitmq
 
   web-proxy:
     build: ./web-proxy
@@ -19,14 +28,29 @@ services:
       - app
       - db
 
-#  rabbitmq:
-#    image: rabbitmq
-#    ports:
-#      - "15672:15672"
-#      - "5672:5672"
-#    volumes:
-#      - ./data/rabbitmq:/var/lib/rabbitmq
-#    restart: on-failure
+  rabbitmq:
+    image: rabbitmq:3.13.1-management
+    hostname: rabbitmq
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "rabbitmq-diagnostics",
+          "check_port_connectivity"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit disk_free_limit 2147483648
+    restart: on-failure
 
   db:
     container_name: db
@@ -40,4 +64,25 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=wine
     env_file:
-      - .env
+    - ./app/.envdb
+
+  rabbit-worker:
+    build: ./app/worker
+    command: python rabbit.py
+    volumes:
+      - ./app:/app
+    depends_on:
+      - rabbitmq
+      - db
+    environment:
+      - PYTHONPATH = /app
+      - DB_HOST=db
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=${DB_NAME}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    restart: on-failure
