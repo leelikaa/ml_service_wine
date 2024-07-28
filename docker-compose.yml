@@ -19,6 +19,8 @@ services:
     depends_on:
       - db
       - rabbitmq
+    ports:
+      - "8000:8000"
 
   web-proxy:
     build: ./web-proxy
@@ -84,3 +86,7 @@ services:
        POSTGRES_USER: ${POSTGRES_USER}
        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     restart: on-failure
+
+networks:
+  default:
+    driver: bridge
