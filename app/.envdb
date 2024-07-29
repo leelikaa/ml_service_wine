@@ -1,9 +1,0 @@
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-RABBITMQ_USER=rmuser
-RABBITMQ_PASSWORD=rmpassword
-DB_HOST=db
-DB_PORT=5432
-DB_USER=postgres
-DB_PASS=postgres
-DB_NAME=wine

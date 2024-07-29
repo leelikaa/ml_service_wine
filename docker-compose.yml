@@ -18,6 +18,7 @@ services:
     depends_on:
       - db
       - rabbitmq
+      - rabbit-worker
 
   web-proxy:
     build: ./web-proxy

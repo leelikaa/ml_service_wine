@@ -97,8 +97,16 @@ def callback(ch, method, properties, body):
     Transaction_Services.decrease(wine_data['user_id'], prediction_price, db)
 
 
-channel.basic_qos(prefetch_count=1)
-channel.basic_consume(queue='prediction_queue', on_message_callback=callback)
+def start_worker():
+    connection = pika.BlockingConnection(connection_params)
+    channel = connection.channel()
+    queue_name = "prediction_queue"
+    channel.queue_declare(queue=queue_name)
+    channel.basic_qos(prefetch_count=1)
+    channel.basic_consume(queue=queue_name, on_message_callback=callback)
+    print(' [*] Waiting for messages. To exit press CTRL+C')
+    channel.start_consuming()
 
-print(' [*] Waiting for messages. To exit press CTRL+C')
-channel.start_consuming()
+
+if __name__ == "__main__":
+    start_worker()

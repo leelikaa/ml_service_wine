@@ -3,4 +3,4 @@ local/
 __pycache__
 .env
 data/
-
+app/.envdb

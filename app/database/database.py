@@ -2,6 +2,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import create_engine
 from functools import lru_cache
 from typing import Optional
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -23,17 +24,16 @@ class Settings(BaseSettings):
 
 
 @lru_cache()
-def get_db_url() -> str:
-    return (
-        f'postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
-    )
+def get_settings() -> Settings:
+    return Settings()
 
 
-db_url = get_db_url()
+settings = get_settings()
 
-engine = create_engine(url=db_url,
+engine = create_engine(url=settings.DATABASE_URL,
                        echo=False,
                        client_encoding='utf8')
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
@@ -41,9 +41,8 @@ Base = declarative_base()
 
 def get_session():
     with SessionLocal() as session:
-        return session
+        yield session
 
 
 def init_db():
-    Base.metadata.drop_all(bind=engine) #это на период проверок
     Base.metadata.create_all(bind=engine)
