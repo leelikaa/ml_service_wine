@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: Optional[str] = None
     RABBITMQ_USER: Optional[str] = None
     RABBITMQ_PASSWORD: Optional[str] = None
+    SECRET_KEY: Optional[str] = None
 
     @property
     def DATABASE_URL(self):

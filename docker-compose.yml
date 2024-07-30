@@ -13,6 +13,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=wine
+      - SECRET_KEY=${SECRET_KEY}
     volumes:
       - ./app:/app
     depends_on:
@@ -64,6 +65,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=wine
+      - SECRET_KEY=${SECRET_KEY}
     env_file:
     - ./app/.envdb
 

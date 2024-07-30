@@ -16,3 +16,4 @@ pika
 pydantic
 alembic
 psycopg
+PyJWT

@@ -9,6 +9,7 @@ from sqlalchemy.orm.exc import NoResultFound
 import json
 import pika
 import os
+from auth.jwt_handler import create_access_token, verify_access_token, oauth2_scheme
 
 prediction_route = APIRouter(tags=["Prediction"])
 prediction_price = 100.0
@@ -45,7 +46,8 @@ def publish_message(exchange_name: str, routing_key: str, body: dict, reply_to: 
 
 
 @prediction_route.post("{id}/predict")
-def new_predict(id: int, wine_data: PydanticWineDescription, db: Session = Depends(get_session)):
+def new_predict(id: int, wine_data: PydanticWineDescription, db: Session = Depends(get_session), token: str = Depends(oauth2_scheme)):
+    verify_access_token(token)
 
     try:
         user = User_Services.get_user_by_id(id, db)
@@ -76,7 +78,9 @@ def new_predict(id: int, wine_data: PydanticWineDescription, db: Session = Depen
 
 
 @prediction_route.get("{id}/my_predictions")
-def user_predictions(id: int, db: Session = Depends(get_session)):
+def user_predictions(id: int, db: Session = Depends(get_session), token: str = Depends(oauth2_scheme)):
+    verify_access_token(token)
+
     try:
         prediction = Prediction_Services.get_prediction_by_user(id, db)
     except NoResultFound:
