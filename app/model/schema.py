@@ -3,6 +3,11 @@ from datetime import datetime
 from typing import Optional
 
 
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+
+
 class PydanticUsersData(BaseModel):  # базовая информация при регистрации (думаю будет полезно при развитии сервиса)
     #gender: str
     #age: int

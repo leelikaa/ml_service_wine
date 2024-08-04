@@ -4,7 +4,7 @@ services:
   app:
     build: ./app/
     environment:
-      - PYTHONPATH = /app
+      - PYTHONPATH=/app
       - DB_HOST=${DB_HOST}
       - DB_NAME=${DB_NAME}
       - DB_PASS=${DB_PASS}
@@ -16,6 +16,7 @@ services:
       - SECRET_KEY=${SECRET_KEY}
     volumes:
       - ./app:/app
+      - ./logs:/app/logs
     depends_on:
       - db
       - rabbitmq
@@ -78,7 +79,7 @@ services:
       - rabbitmq
       - db
     environment:
-      - PYTHONPATH = /app
+      - PYTHONPATH=/app
       - DB_HOST=db
       - DB_PORT=${DB_PORT}
       - DB_USER=${DB_USER}
@@ -89,3 +90,15 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     restart: on-failure
+
+  webui:
+    build: ./app/webui
+    image: ui_1:latest
+    volumes:
+      - ./app:/app
+    ports:
+      - "8501:8501"
+    depends_on:
+      - app
+    environment:
+      - PYTHONPATH=/app

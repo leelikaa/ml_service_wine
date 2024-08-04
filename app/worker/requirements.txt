@@ -17,3 +17,6 @@ pydantic
 alembic
 psycopg
 PyJWT
+python-multipart
+streamlit
+requests

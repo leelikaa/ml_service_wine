@@ -9,23 +9,17 @@ from sqlalchemy.orm.exc import NoResultFound
 import json
 import pika
 import os
-from auth.jwt_handler import create_access_token, verify_access_token, oauth2_scheme
+from auth.dependencies import get_current_user
+from services.logging_config import get_logger
+from worker.rabbit_connection import connection_params
+
+logger = get_logger(logger_name=__name__)
 
 prediction_route = APIRouter(tags=["Prediction"])
 prediction_price = 100.0
 
-rabbitmq_host = os.getenv("RABBITMQ_HOST", "rabbitmq")
-rabbitmq_port = int(os.getenv("RABBITMQ_PORT", 5672))
-rabbitmq_user = os.getenv("RABBITMQ_USER", "rmuser")
-rabbitmq_password = os.getenv("RABBITMQ_PASSWORD", "rmpassword")
-
 
 def get_rabbitmq_connection():
-    connection_params = pika.ConnectionParameters(
-        host=rabbitmq_host,
-        port=rabbitmq_port,
-        credentials=pika.PlainCredentials(rabbitmq_user, rabbitmq_password)
-    )
     return pika.BlockingConnection(connection_params)
 
 
@@ -33,10 +27,12 @@ def publish_message(exchange_name: str, routing_key: str, body: dict, reply_to: 
     connection = get_rabbitmq_connection()
     channel = connection.channel()
     channel.queue_declare(queue=routing_key)
+    body_str = json.dumps(body)
+    print(f"Publishing message to routing_key '{routing_key}': {body_str}")
     channel.basic_publish(
         exchange=exchange_name,
         routing_key=routing_key,
-        body=json.dumps(body),
+        body=body_str,
         properties=pika.BasicProperties(
             reply_to=reply_to,
             correlation_id=correlation_id
@@ -46,26 +42,30 @@ def publish_message(exchange_name: str, routing_key: str, body: dict, reply_to: 
 
 
 @prediction_route.post("{id}/predict")
-def new_predict(id: int, wine_data: PydanticWineDescription, db: Session = Depends(get_session), token: str = Depends(oauth2_scheme)):
-    verify_access_token(token)
+def new_predict(id: int, wine_data: PydanticWineDescription, db: Session = Depends(get_session), user: int = Depends(get_current_user)):
+    logger.info(f"Received prediction request for user_id={id}")
+    logger.info(f"Token: {user}")
 
+    if id != user:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized. Pls use /user/signin")
     try:
         user = User_Services.get_user_by_id(id, db)
     except NoResultFound:
+        logger.error(f"User with id {id} not found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with id {id} not found")
 
     user_balance = user.balance
     if user_balance < prediction_price:
+        logger.error(f"Insufficient funds for user_id {id}. Need {prediction_price - user_balance}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"Don't have enough money, need to add {prediction_price-user_balance}")
     else:
-        exchange_name = 'prediction_exchange'
-        routing_key = 'ml_tasks'
-        reply_to = "prediction_queue"
+        routing_key = 'prediction_queue'
+        reply_to = "result_queue"
         correlation_id = str(id)
 
         publish_message(
-            exchange_name=exchange_name,
+            exchange_name='',
             routing_key=routing_key,
             body={
                 "user_id": id,
@@ -74,16 +74,21 @@ def new_predict(id: int, wine_data: PydanticWineDescription, db: Session = Depen
             reply_to=reply_to,
             correlation_id=correlation_id
         )
+        logger.info(f"Prediction task sent for user_id {id}")
         return {"message": "Prediction task sent."}
 
 
 @prediction_route.get("{id}/my_predictions")
-def user_predictions(id: int, db: Session = Depends(get_session), token: str = Depends(oauth2_scheme)):
-    verify_access_token(token)
+def user_predictions(id: int, db: Session = Depends(get_session), user: int = Depends(get_current_user)):
+    logger.info(f"Fetching predictions for user_id={id}")
+    logger.info(f"Token: {user}")
+
+    if id != user:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized. Pls use /user/signin")
 
     try:
         prediction = Prediction_Services.get_prediction_by_user(id, db)
     except NoResultFound:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Result not found.")
+        logger.error(f"No predictions found for user_id {id}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No predictions found for user_id {id}")
     return prediction
-

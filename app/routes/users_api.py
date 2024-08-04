@@ -2,11 +2,15 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from database.database import get_session
 from sqlalchemy.orm import Session
 from typing import Union
-from model.schema import PydanticUsers
+from model.schema import PydanticUsers, TokenResponse
 from model.users import Users
 from services import User_Services, Transaction_Services
-from auth.jwt_handler import create_access_token, verify_access_token,oauth2_scheme
+from auth.jwt_handler import create_access_token, verify_access_token
+from fastapi.security import OAuth2PasswordRequestForm
+from auth.dependencies import get_current_user
+from services.logging_config import get_logger
 
+logger = get_logger(logger_name=__name__)
 
 user_route = APIRouter(tags=["User"])
 hash_password = User_Services.HashPassword()
@@ -26,25 +30,26 @@ async def sign_new_user(user: PydanticUsers, session=Depends(get_session)) -> di
     return {"message": "User created successfully"}
 
 
-@user_route.post("/signin")
-async def sign_user_in(email: str, password: str, db: Session = Depends(get_session)):
-    user_exist = User_Services.get_user_by_email(email, db)
+@user_route.post("/signin", response_model=TokenResponse)
+async def sign_user_in(user: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_session)):
+    user_exist = User_Services.get_user_by_email(user.username, db)
     if user_exist is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User does not exist")
-
-    if not hash_password.verify_hash(password, user_exist.password):
+    if not hash_password.verify_hash(user.password, user_exist.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid details passed."
         )
-    token = create_access_token(user_exist.user_id)
-    print(f"User {email} logged in. Your current balance {user_exist.balance}")
-    return {"access_token": token}
+    token = create_access_token(str(user_exist.user_id))
+#   return(f"User {user.username} logged in. Your current balance {user_exist.balance}")
+    return {"access_token": token, "token_type": "Bearer"}
 
 
 @user_route.post("{id}/topup")
-def top_up(id: int, money: Union[int, float] = 0.0, db: Session = Depends(get_session), token: str = Depends(oauth2_scheme)):
-    verify_access_token(token)
+def top_up(id: int, money: Union[int, float] = 0.0, db: Session = Depends(get_session), user: int = Depends(get_current_user)):
+    logger.info(f"User from token: {user}")
+    if id != user:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized. Pls use /user/signin")
     money = float(money)
     if money <= 0.0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect amount of money, must be >0")
@@ -54,9 +59,18 @@ def top_up(id: int, money: Union[int, float] = 0.0, db: Session = Depends(get_se
 
 
 @user_route.post("{id}/balance")
-def user_balance(id: int, db: Session = Depends(get_session), token: str = Depends(oauth2_scheme)):
-    verify_access_token(token)
+def user_balance(id: int, db: Session = Depends(get_session), user: int = Depends(get_current_user)):
+    if id != user:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized. Pls use /user/signin")
     user = User_Services.get_user_by_id(id, db)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User id not found")
-    return user.balance
+    return {"balance": user.balance}
+
+
+@user_route.get("/{username}")
+def get_user_id_by_username(username: str, db: Session = Depends(get_session)):
+    user = User_Services.get_user_by_email(username, db)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return {"user_id": user.user_id}
