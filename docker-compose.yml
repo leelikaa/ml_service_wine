@@ -1,0 +1,104 @@
+version: '3'
+
+services:
+  app:
+    build: ./app/
+    environment:
+      - PYTHONPATH=/app
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_PASS=${DB_PASS}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=wine
+      - SECRET_KEY=${SECRET_KEY}
+    volumes:
+      - ./app:/app
+      - ./logs:/app/logs
+    depends_on:
+      - db
+      - rabbitmq
+      - rabbit-worker
+
+  web-proxy:
+    build: ./web-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+      - db
+
+  rabbitmq:
+    image: rabbitmq:3.13.1-management
+    hostname: rabbitmq
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "rabbitmq-diagnostics",
+          "check_port_connectivity"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit disk_free_limit 2147483648
+    restart: on-failure
+
+  db:
+    container_name: db
+    image: postgres:16-alpine
+    volumes:
+      - ./data/base:/var/lib/postgresql/data
+    expose:
+      - 5432
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=wine
+      - SECRET_KEY=${SECRET_KEY}
+    env_file:
+    - ./app/.envdb
+
+  rabbit-worker:
+    build: ./app/worker
+    command: python rabbit.py
+    volumes:
+      - ./app:/app
+    depends_on:
+      - rabbitmq
+      - db
+    environment:
+      - PYTHONPATH=/app
+      - DB_HOST=db
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=${DB_NAME}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    restart: on-failure
+
+  webui:
+    build: ./app/webui
+    image: ui_1:latest
+    volumes:
+      - ./app:/app
+    ports:
+      - "8501:8501"
+    depends_on:
+      - app
+    environment:
+      - PYTHONPATH=/app
